@@ -109,37 +109,137 @@ function initializeCalendar() {
     
     // 拖拽和调整事件后保存
     eventDrop: function(info) {
-      // 记录拖拽操作到历史
-      if (!isUndoRedoOperation) {
-        var oldData = {
-          id: info.event.id,
-          title: info.oldEvent.title,
-          start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
-          end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
-          allDay: info.oldEvent.allDay,
-          backgroundColor: info.oldEvent.backgroundColor,
-          borderColor: info.oldEvent.borderColor
+      // 检查是否为重复事件
+      var event = info.event;
+      var seriesId = event.extendedProps?.seriesId;
+      var repeatFrequency = event.extendedProps?.repeatFrequency;
+      
+      if (seriesId && repeatFrequency && repeatFrequency !== 'none') {
+        console.log('🔄 拖拽重复事件，显示编辑选项对话框');
+        
+        // 构造变更描述
+        var changes = {
+          position: `从 ${formatDateTime(info.oldEvent.start)} 移动到 ${formatDateTime(event.start)}`
         };
-        recordOperation('move', info.event, oldData);
+        
+        showRepeatEditDialog(event, changes, function(editOptions) {
+          console.log('📝 用户选择编辑选项:', editOptions);
+          
+          if (editOptions.length > 0) {
+            // 应用移动操作到选定范围
+            applyRepeatEventChanges(event, editOptions, {
+              start: event.start,
+              end: event.end,
+              allDay: event.allDay
+            }, {
+              // 传递原始时间用于计算偏移量
+              originalStart: info.oldEvent.start,
+              originalEnd: info.oldEvent.end
+            });
+            
+            // 记录操作到历史
+            if (!isUndoRedoOperation) {
+              var oldData = {
+                id: info.event.id,
+                title: info.oldEvent.title,
+                start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
+                end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
+                allDay: info.oldEvent.allDay,
+                backgroundColor: info.oldEvent.backgroundColor,
+                borderColor: info.oldEvent.borderColor
+              };
+              recordOperation('move', info.event, oldData);
+            }
+            
+            // saveEvents() 已在 applyRepeatEventChanges 内部调用
+          } else {
+            // 用户取消，恢复原位置
+            info.revert();
+          }
+        });
+      } else {
+        // 非重复事件，直接保存
+        if (!isUndoRedoOperation) {
+          var oldData = {
+            id: info.event.id,
+            title: info.oldEvent.title,
+            start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
+            end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
+            allDay: info.oldEvent.allDay,
+            backgroundColor: info.oldEvent.backgroundColor,
+            borderColor: info.oldEvent.borderColor
+          };
+          recordOperation('move', info.event, oldData);
+        }
+        saveEvents();
       }
-      saveEvents();
     },
     
     eventResize: function(info) {
-      // 记录调整大小操作到历史
-      if (!isUndoRedoOperation) {
-        var oldData = {
-          id: info.event.id,
-          title: info.oldEvent.title,
-          start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
-          end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
-          allDay: info.oldEvent.allDay,
-          backgroundColor: info.oldEvent.backgroundColor,
-          borderColor: info.oldEvent.borderColor
+      // 检查是否为重复事件
+      var event = info.event;
+      var seriesId = event.extendedProps?.seriesId;
+      var repeatFrequency = event.extendedProps?.repeatFrequency;
+      
+      if (seriesId && repeatFrequency && repeatFrequency !== 'none') {
+        console.log('🔄 调整重复事件大小，显示编辑选项对话框');
+        
+        // 构造变更描述
+        var changes = {
+          duration: `从 ${formatDateTime(info.oldEvent.start)} - ${formatDateTime(info.oldEvent.end)} 调整到 ${formatDateTime(event.start)} - ${formatDateTime(event.end)}`
         };
-        recordOperation('resize', info.event, oldData);
+        
+        showRepeatEditDialog(event, changes, function(editOptions) {
+          console.log('📝 用户选择编辑选项:', editOptions);
+          
+          if (editOptions.length > 0) {
+            // 应用调整大小操作到选定范围
+            applyRepeatEventChanges(event, editOptions, {
+              start: event.start,
+              end: event.end,
+              allDay: event.allDay
+            }, {
+              // 传递原始时间用于计算偏移量
+              originalStart: info.oldEvent.start,
+              originalEnd: info.oldEvent.end
+            });
+            
+            // 记录操作到历史
+            if (!isUndoRedoOperation) {
+              var oldData = {
+                id: info.event.id,
+                title: info.oldEvent.title,
+                start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
+                end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
+                allDay: info.oldEvent.allDay,
+                backgroundColor: info.oldEvent.backgroundColor,
+                borderColor: info.oldEvent.borderColor
+              };
+              recordOperation('resize', info.event, oldData);
+            }
+            
+            // saveEvents() 已在 applyRepeatEventChanges 内部调用
+          } else {
+            // 用户取消，恢复原大小
+            info.revert();
+          }
+        });
+      } else {
+        // 非重复事件，直接保存
+        if (!isUndoRedoOperation) {
+          var oldData = {
+            id: info.event.id,
+            title: info.oldEvent.title,
+            start: info.oldEvent.start ? info.oldEvent.start.toISOString() : null,
+            end: info.oldEvent.end ? info.oldEvent.end.toISOString() : null,
+            allDay: info.oldEvent.allDay,
+            backgroundColor: info.oldEvent.backgroundColor,
+            borderColor: info.oldEvent.borderColor
+          };
+          recordOperation('resize', info.event, oldData);
+        }
+        saveEvents();
       }
-      saveEvents();
     },
     
     // 加载保存的事件
@@ -1229,6 +1329,22 @@ function updateUndoRedoButtons() {
 }
 
 /**
+ * 格式化日期时间显示
+ */
+function formatDateTime(date) {
+  if (!date) return '无';
+  
+  var d = new Date(date);
+  var year = d.getFullYear();
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  var hours = String(d.getHours()).padStart(2, '0');
+  var minutes = String(d.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+/**
  * 获取重复频率的中文标签
  */
 function getRepeatLabel(frequency) {
@@ -1364,6 +1480,12 @@ function showRepeatEditDialog(event, changes, callback) {
   }
   if (changes.color) {
     changeDescription += `• 颜色：${changes.color}\n`;
+  }
+  if (changes.position) {
+    changeDescription += `• 位置：${changes.position}\n`;
+  }
+  if (changes.duration) {
+    changeDescription += `• 时间：${changes.duration}\n`;
   }
   
   dialog.innerHTML = `
@@ -1796,6 +1918,154 @@ function applyRepeatEventEdit(event, changes, editOptions) {
   }
   
   console.log('✅ 重复事件编辑完成');
+}
+
+/**
+ * 应用重复事件位置和时间变更
+ */
+function applyRepeatEventChanges(event, editOptions, timeChanges, originalTimes) {
+  console.log('🔧 开始应用重复事件位置/时间变更');
+  console.log('  - 传入事件:', event.id, event.title);
+  console.log('  - 时间变更:', timeChanges);
+  console.log('  - 原始时间:', originalTimes);
+  console.log('  - 编辑选项:', editOptions);
+  
+  // 安全检查：确保事件对象有效
+  if (!event || !event.id) {
+    console.error('❌ 传入的事件对象无效:', event);
+    return;
+  }
+  
+  // 再次从日历中获取事件对象，确保它仍然存在
+  var currentEvent = calendar.getEventById(event.id);
+  if (!currentEvent) {
+    console.error('❌ 事件已不存在于日历中:', event.id);
+    return;
+  }
+  
+  // 使用重新获取的事件对象
+  event = currentEvent;
+  
+  var eventsToEdit = [];
+  var seriesId = event.extendedProps?.seriesId;
+  var currentIndex = event.extendedProps?.seriesIndex || 0;
+  
+  console.log('🔄 处理重复事件位置/时间变更:', editOptions, '系列ID:', seriesId, '当前索引:', currentIndex);
+  
+  // 根据选择的选项决定要编辑的事件
+  if (editOptions.includes('all')) {
+    // 编辑整个系列
+    eventsToEdit = calendar.getEvents().filter(e => 
+      e.extendedProps?.seriesId === seriesId
+    );
+    console.log('编辑整个系列，找到', eventsToEdit.length, '个事件');
+  } else {
+    // 使用Set来收集要编辑的事件ID，避免重复
+    var eventIdsToEdit = new Set();
+    
+    // 分别处理各个选项
+    if (editOptions.includes('current')) {
+      // 编辑当前事件
+      eventIdsToEdit.add(event.id);
+      console.log('添加当前事件到编辑列表:', event.id);
+    }
+    
+    if (editOptions.includes('future')) {
+      // 编辑当前事件以后的重复事件（不包括当前）
+      var futureEvents = calendar.getEvents().filter(e => 
+        e.extendedProps?.seriesId === seriesId && 
+        e.extendedProps?.seriesIndex > currentIndex
+      );
+      futureEvents.forEach(e => eventIdsToEdit.add(e.id));
+      console.log('添加以后的事件到编辑列表，找到', futureEvents.length, '个事件');
+    }
+    
+    if (editOptions.includes('past')) {
+      // 编辑当前事件以前的重复事件（不包括当前）
+      var pastEvents = calendar.getEvents().filter(e => 
+        e.extendedProps?.seriesId === seriesId && 
+        e.extendedProps?.seriesIndex < currentIndex
+      );
+      pastEvents.forEach(e => eventIdsToEdit.add(e.id));
+      console.log('添加以前的事件到编辑列表，找到', pastEvents.length, '个事件');
+    }
+    
+    // 根据收集的ID获取实际的事件对象
+    eventsToEdit = [];
+    Array.from(eventIdsToEdit).forEach(id => {
+      var foundEvent = calendar.getEventById(id);
+      if (foundEvent) {
+        eventsToEdit.push(foundEvent);
+      }
+    });
+  }
+  
+  if (eventsToEdit.length === 0) {
+    console.log('⚠️ 没有找到要编辑的事件');
+    return;
+  }
+  
+  // 应用时间变更到所有选中的事件
+  console.log('正在应用位置/时间变更到', eventsToEdit.length, '个事件');
+  
+  // 计算时间偏移量（使用原始时间作为基准）
+  var originalStart = originalTimes ? new Date(originalTimes.originalStart) : new Date(event.start);
+  var newStart = new Date(timeChanges.start);
+  var timeOffset = newStart.getTime() - originalStart.getTime();
+  
+  var originalEnd = originalTimes && originalTimes.originalEnd ? new Date(originalTimes.originalEnd) : (event.end ? new Date(event.end) : null);
+  var newEnd = timeChanges.end ? new Date(timeChanges.end) : null;
+  var endTimeOffset = null;
+  
+  if (originalEnd && newEnd) {
+    endTimeOffset = newEnd.getTime() - originalEnd.getTime();
+  }
+  
+  console.log('📏 时间偏移计算:');
+  console.log('  - 原始开始时间:', originalStart.toISOString());
+  console.log('  - 新开始时间:', newStart.toISOString());
+  console.log('  - 开始时间偏移量:', timeOffset, 'ms');
+  if (originalEnd && newEnd) {
+    console.log('  - 原始结束时间:', originalEnd.toISOString());
+    console.log('  - 新结束时间:', newEnd.toISOString());
+    console.log('  - 结束时间偏移量:', endTimeOffset, 'ms');
+  }
+  
+  eventsToEdit.forEach((e, index) => {
+    console.log('应用变更到事件:', e.id, e.title);
+    
+    if (editOptions.includes('current') && e.id === event.id) {
+      // 对于当前事件，直接设置新的时间
+      e.setStart(timeChanges.start);
+      if (timeChanges.end) {
+        e.setEnd(timeChanges.end);
+      }
+      e.setProp('allDay', timeChanges.allDay);
+    } else {
+      // 对于其他事件，应用时间偏移
+      var eventStart = new Date(e.start);
+      var newEventStart = new Date(eventStart.getTime() + timeOffset);
+      e.setStart(newEventStart);
+      
+      if (e.end && endTimeOffset !== null) {
+        var eventEnd = new Date(e.end);
+        var newEventEnd = new Date(eventEnd.getTime() + endTimeOffset);
+        e.setEnd(newEventEnd);
+      } else if (timeChanges.end && !e.end) {
+        // 如果原事件没有结束时间，但新事件有，计算持续时间
+        var duration = newEnd.getTime() - newStart.getTime();
+        var newEventEnd = new Date(newEventStart.getTime() + duration);
+        e.setEnd(newEventEnd);
+      }
+      
+      e.setProp('allDay', timeChanges.allDay);
+    }
+  });
+  
+  // 保存事件
+  saveEvents();
+  
+  console.log('✅ 重复事件位置/时间变更完成');
 }
 
 /**
