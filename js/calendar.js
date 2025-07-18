@@ -1,4 +1,4 @@
-// 全局变量
+﻿// 全局变量
 var calendar;
 var selectedColor = '#3788d8'; // 默认颜色
 var eventTitle = ''; // 预设事件名称
@@ -339,93 +339,6 @@ function handleEventClick(info) {
   
   // 进入编辑模式
   enterEditingMode(selectedEvent);
-}
-
-/**
- * 设置透明度预览（拖动时实时预览，不触发编辑完成）
- */
-function setOpacityPreview(opacity) {
-  selectedOpacity = opacity;
-  
-  // 更新滑动条和输入框的值
-  var opacitySlider = document.getElementById('opacitySlider');
-  var opacityInput = document.getElementById('opacityInput');
-  
-  if (opacitySlider) {
-    opacitySlider.value = opacity;
-  }
-  
-  if (opacityInput) {
-    opacityInput.value = opacity.toFixed(2);
-  }
-  
-  // 如果处于编辑模式，实时更新事件的视觉效果，但不暂存到pending状态
-  if (isEditingMode && selectedEvent) {
-    console.log('�️ 透明度实时预览:', opacity);
-    var color = pendingColor || selectedColor;
-    var rgba = hexToRgba(color, opacity);
-    
-    // 直接更新事件的显示，但不记录为待处理的更改
-    selectedEvent.setProp('backgroundColor', rgba);
-    
-    // 同时更新扩展属性，但这只是临时的
-    if (!selectedEvent.extendedProps) {
-      selectedEvent.extendedProps = {};
-    }
-    selectedEvent.extendedProps.opacity = opacity;
-  }
-  
-  updatePreview();
-}
-
-/**
- * 设置透明度最终值（停止拖动时触发编辑完成）
- */
-function setOpacityFinal(opacity) {
-  selectedOpacity = opacity;
-  
-  // 更新滑动条和输入框的值
-  var opacitySlider = document.getElementById('opacitySlider');
-  var opacityInput = document.getElementById('opacityInput');
-  
-  if (opacitySlider) {
-    opacitySlider.value = opacity;
-  }
-  
-  if (opacityInput) {
-    opacityInput.value = opacity.toFixed(2);
-  }
-  
-  // 如果处于编辑模式，暂存透明度变更并触发编辑完成
-  if (isEditingMode && selectedEvent) {
-    console.log('🔍 透明度最终提交:', opacity);
-    pendingOpacity = opacity;
-    // 触发编辑完成
-    applyPendingChanges();
-  }
-  
-  updatePreview();
-}
-
-/**
- * 设置透明度（保留原有函数，用于非编辑模式）
- */
-function setOpacity(opacity) {
-  selectedOpacity = opacity;
-  
-  // 更新滑动条和输入框的值
-  var opacitySlider = document.getElementById('opacitySlider');
-  var opacityInput = document.getElementById('opacityInput');
-  
-  if (opacitySlider) {
-    opacitySlider.value = opacity;
-  }
-  
-  if (opacityInput) {
-    opacityInput.value = opacity.toFixed(2);
-  }
-  
-  updatePreview();
 }
 
 /**
@@ -1355,9 +1268,6 @@ function showRepeatEditDialog(event, changes, callback) {
   if (changes.color) {
     changeDescription += `• 颜色：${changes.color}\n`;
   }
-  if (changes.opacity !== undefined) {
-    changeDescription += `• 透明度：${(changes.opacity * 100).toFixed(0)}%\n`;
-  }
   
   dialog.innerHTML = `
     <h3 style="margin-top: 0;">✏️ 编辑重复事件</h3>
@@ -1444,7 +1354,7 @@ function showRepeatEditDialog(event, changes, callback) {
     console.log('❌ 用户取消了重复事件编辑');
     
     // 如果没有待处理的更改，可以退出编辑模式
-    if (!pendingTitle && !pendingColor && pendingOpacity === '') {
+    if (!pendingTitle && !pendingColor) {
       setTimeout(function() {
         if (isEditingMode && !isShowingEditDialog) {
           exitEditingMode();
@@ -1462,7 +1372,7 @@ function showRepeatEditDialog(event, changes, callback) {
       console.log('❌ 用户点击背景取消了重复事件编辑');
       
       // 如果没有待处理的更改，可以退出编辑模式
-      if (!pendingTitle && !pendingColor && pendingOpacity === '') {
+      if (!pendingTitle && !pendingColor) {
         setTimeout(function() {
           if (isEditingMode && !isShowingEditDialog) {
             exitEditingMode();
