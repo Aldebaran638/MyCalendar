@@ -8,6 +8,9 @@ var pendingTitle = ''; // 待更新的标题
 var pendingColor = ''; // 待更新的颜色
 var isShowingEditDialog = false; // 标记是否正在显示编辑对话框
 
+// 控制面板相关变量
+var isControlPanelVisible = false; // 控制面板是否可见
+
 // 重复事件相关变量
 var selectedRepeatFrequency = 'none'; // 重复频率
 var selectedRepeatCount = 10; // 重复次数
@@ -24,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
   initializeControls();
   updateUndoRedoButtons(); // 初始化按钮状态
   initializeClock(); // 初始化时钟显示
+  
+  // 初始化控制面板状态（确保隐藏）
+  initializeControlPanel();
 });
 
 /**
@@ -342,6 +348,94 @@ function handleEventClick(info) {
 }
 
 /**
+ * 初始化控制面板状态
+ */
+function initializeControlPanel() {
+  const controlPanel = document.getElementById('controlPanel');
+  const toggleBtn = document.getElementById('panelToggleBtn');
+  const mainContainer = document.querySelector('.main-container');
+  
+  // 强制设置为隐藏状态
+  isControlPanelVisible = false;
+  controlPanel.classList.remove('show');
+  toggleBtn.classList.remove('panel-open');
+  mainContainer.classList.remove('panel-open');
+  
+  console.log('🔧 控制面板初始化完成，状态：隐藏');
+}
+
+/**
+ * 切换控制面板显示/隐藏
+ */
+function toggleControlPanel() {
+  console.log('🎯 切换按钮被点击，当前状态:', isControlPanelVisible);
+  
+  const controlPanel = document.getElementById('controlPanel');
+  const toggleBtn = document.getElementById('panelToggleBtn');
+  const mainContainer = document.querySelector('.main-container');
+  
+  isControlPanelVisible = !isControlPanelVisible;
+  
+  if (isControlPanelVisible) {
+    console.log('📖 将显示控制面板');
+    showControlPanel();
+  } else {
+    console.log('📕 将隐藏控制面板');
+    hideControlPanel();
+  }
+}
+
+/**
+ * 显示控制面板
+ */
+function showControlPanel() {
+  const controlPanel = document.getElementById('controlPanel');
+  const toggleBtn = document.getElementById('panelToggleBtn');
+  const mainContainer = document.querySelector('.main-container');
+  
+  // 无条件执行显示操作
+  isControlPanelVisible = true;
+  
+  if (controlPanel) controlPanel.classList.add('show');
+  if (toggleBtn) toggleBtn.classList.add('panel-open');
+  if (mainContainer) mainContainer.classList.add('panel-open');
+  
+  // 强制重新渲染日历以适应新的容器大小
+  setTimeout(() => {
+    if (calendar) {
+      calendar.updateSize();
+    }
+  }, 350); // 等待CSS动画完成
+  
+  console.log('📖 控制面板已显示');
+}
+
+/**
+ * 隐藏控制面板
+ */
+function hideControlPanel() {
+  const controlPanel = document.getElementById('controlPanel');
+  const toggleBtn = document.getElementById('panelToggleBtn');
+  const mainContainer = document.querySelector('.main-container');
+  
+  // 无条件执行隐藏操作
+  isControlPanelVisible = false;
+  
+  if (controlPanel) controlPanel.classList.remove('show');
+  if (toggleBtn) toggleBtn.classList.remove('panel-open');
+  if (mainContainer) mainContainer.classList.remove('panel-open');
+  
+  // 强制重新渲染日历以适应新的容器大小
+  setTimeout(() => {
+    if (calendar) {
+      calendar.updateSize();
+    }
+  }, 350); // 等待CSS动画完成
+  
+  console.log('📕 控制面板已隐藏');
+}
+
+/**
  * 选择颜色（立即应用）
  */
 function selectColor(color) {
@@ -397,6 +491,9 @@ function enterEditingMode(event) {
   console.log('🔄 进入编辑模式，事件ID:', event.id, '标题:', event.title);
   
   isEditingMode = true;
+  
+  // 自动显示控制面板
+  showControlPanel();
   
   // 更新预设区显示选中事件的信息
   // 对于重复事件，显示原始标题（不含重复标识）

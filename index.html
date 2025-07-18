@@ -31,59 +31,71 @@
       </small>
     </div>
     
-    <div id='calendar'></div>
-    
-    <div class="control-panel">
-      <div class="control-group">
-        <label>🏷️ 事件名称</label>
-        <input type="text" id="eventTitleInput" placeholder="输入事件名称（留空则默认为'新事件'）">
+    <div class="main-container">
+      <div id='calendar'></div>
+      
+      <!-- 控制面板切换按钮 -->
+      <div class="panel-toggle-btn" id="panelToggleBtn" onclick="toggleControlPanel()">
+        <span class="toggle-icon">▶</span>
       </div>
       
-      <div class="control-group">
-        <label>🔁 重复频率</label>
-        <select id="repeatFrequency">
-          <option value="none">不重复</option>
-          <option value="daily">每天</option>
-          <option value="weekly">每周</option>
-          <option value="monthly">每月</option>
-          <option value="yearly">每年</option>
-        </select>
-        <small style="color: #666; font-size: 12px;">
-          选择事件的重复频率
-        </small>
-      </div>
-      
-      <div class="control-group" id="repeatCountGroup" style="display: none;">
-        <label>🔢 重复次数</label>
-        <input type="number" id="repeatCount" min="1" max="365" value="10" placeholder="重复次数">
-        <small style="color: #666; font-size: 12px;">
-          最多重复多少次（留空则无限重复）
-        </small>
-      </div>
-      
-      <div class="control-group">
-        <label>🎨 选择颜色</label>
-        <div class="color-options">
-          <div class="color-option" data-color="#3788d8" style="background-color: #3788d8;" onclick="selectColor('#3788d8')"></div>
-          <div class="color-option" data-color="#28a745" style="background-color: #28a745;" onclick="selectColor('#28a745')"></div>
-          <div class="color-option" data-color="#dc3545" style="background-color: #dc3545;" onclick="selectColor('#dc3545')"></div>
-          <div class="color-option" data-color="#ffc107" style="background-color: #ffc107;" onclick="selectColor('#ffc107')"></div>
-          <div class="color-option" data-color="#6f42c1" style="background-color: #6f42c1;" onclick="selectColor('#6f42c1')"></div>
-          <div class="color-option" data-color="#fd7e14" style="background-color: #fd7e14;" onclick="selectColor('#fd7e14')"></div>
-          <div class="color-option" data-color="#20c997" style="background-color: #20c997;" onclick="selectColor('#20c997')"></div>
-          <div class="color-option" data-color="#6c757d" style="background-color: #6c757d;" onclick="selectColor('#6c757d')"></div>
+      <div class="control-panel" id="controlPanel">
+        <div class="panel-header">
+          <h3>🎛️ 控制面板</h3>
+          <div class="panel-close-btn" onclick="hideControlPanel()">✕</div>
         </div>
-      </div>
-      
-      <div class="control-group">
-        <label> 预览效果</label>
-        <div class="preview-section">
-          <span class="preview-text">新事件将显示为：</span>
-          <div class="preview-event" id="previewEvent">新事件</div>
+        
+        <div class="control-group">
+          <label>🏷️ 事件名称</label>
+          <input type="text" id="eventTitleInput" placeholder="输入事件名称（留空则默认为'新事件'）">
         </div>
-        <small style="color: #666; margin-top: 5px;">
-          💡 点击事件可选中编辑，按Backspace删除，按Esc退出编辑
-        </small>
+        
+        <div class="control-group">
+          <label>🔁 重复频率</label>
+          <select id="repeatFrequency">
+            <option value="none">不重复</option>
+            <option value="daily">每天</option>
+            <option value="weekly">每周</option>
+            <option value="monthly">每月</option>
+            <option value="yearly">每年</option>
+          </select>
+          <small style="color: #666; font-size: 12px;">
+            选择事件的重复频率
+          </small>
+        </div>
+        
+        <div class="control-group" id="repeatCountGroup" style="display: none;">
+          <label>🔢 重复次数</label>
+          <input type="number" id="repeatCount" min="1" max="365" value="10" placeholder="重复次数">
+          <small style="color: #666; font-size: 12px;">
+            最多重复多少次（留空则无限重复）
+          </small>
+        </div>
+        
+        <div class="control-group">
+          <label>🎨 选择颜色</label>
+          <div class="color-options">
+            <div class="color-option" data-color="#3788d8" style="background-color: #3788d8;" onclick="selectColor('#3788d8')"></div>
+            <div class="color-option" data-color="#28a745" style="background-color: #28a745;" onclick="selectColor('#28a745')"></div>
+            <div class="color-option" data-color="#dc3545" style="background-color: #dc3545;" onclick="selectColor('#dc3545')"></div>
+            <div class="color-option" data-color="#ffc107" style="background-color: #ffc107;" onclick="selectColor('#ffc107')"></div>
+            <div class="color-option" data-color="#6f42c1" style="background-color: #6f42c1;" onclick="selectColor('#6f42c1')"></div>
+            <div class="color-option" data-color="#fd7e14" style="background-color: #fd7e14;" onclick="selectColor('#fd7e14')"></div>
+            <div class="color-option" data-color="#20c997" style="background-color: #20c997;" onclick="selectColor('#20c997')"></div>
+            <div class="color-option" data-color="#6c757d" style="background-color: #6c757d;" onclick="selectColor('#6c757d')"></div>
+          </div>
+        </div>
+        
+        <div class="control-group">
+          <label>👀 预览效果</label>
+          <div class="preview-section">
+            <span class="preview-text">新事件将显示为：</span>
+            <div class="preview-event" id="previewEvent">新事件</div>
+          </div>
+          <small style="color: #666; margin-top: 5px;">
+            💡 点击事件可选中编辑，按Backspace删除，按Esc退出编辑
+          </small>
+        </div>
       </div>
     </div>
 
