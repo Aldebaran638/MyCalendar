@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang='en'>
+    <!-- 文档头部 (head) - 引入资源 -->
   <head>
     <meta charset='utf-8' />
     <title>我的智能日历</title>
@@ -7,10 +8,12 @@
     <!-- 引入FullCalendar库 -->
     <script src='./node_modules/fullcalendar/index.global.min.js'></script>
     
-    <!-- 引入自定义样式 -->
+    <!-- 引入自定义样式，即自己的css文件 -->
     <link rel="stylesheet" href="./css/style.css">
   </head>
+  <!-- 页面主体 (body) - 可见内容 -->
   <body>
+      <!-- 顶部时钟区域 -->
     <div class="digital-clock">
       <div class="time-display" id="currentTime">14:30</div>
       <div class="date-display" id="currentDate">2025年7月18日</div>
@@ -31,18 +34,14 @@
       </small>
     </div>
     
+    <!-- 主容器区域 -->
     <div class="main-container">
       <div id='calendar'></div>
       
-      <!-- 控制面板切换按钮 -->
-      <div class="panel-toggle-btn" id="panelToggleBtn" onclick="toggleControlPanel()">
-        <span class="toggle-icon">▶</span>
-      </div>
-      
+      <!-- 控制面板内容 - 固定在右侧 -->
       <div class="control-panel" id="controlPanel">
         <div class="panel-header">
           <h3>🎛️ 控制面板</h3>
-          <div class="panel-close-btn" onclick="hideControlPanel()">✕</div>
         </div>
         
         <div class="control-group">

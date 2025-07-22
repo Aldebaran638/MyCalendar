@@ -21,8 +21,21 @@ var currentHistoryIndex = -1; // 当前历史位置
 var maxHistorySize = 50; // 最大历史记录数量
 var isUndoRedoOperation = false; // 标记是否正在执行撤回/复原操作
 
+// ID生成器
+var eventIdCounter = 0; // 事件ID计数器，用于生成唯一ID
+
+/**
+ * 生成唯一的事件ID
+ */
+function generateEventId() {
+  return Date.now().toString() + '_' + (++eventIdCounter);
+}
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
+  // 首先清理localStorage中的重复数据
+  cleanupLocalStorage();
+  
   initializeCalendar();
   initializeControls();
   updateUndoRedoButtons(); // 初始化按钮状态
@@ -90,6 +103,9 @@ function initializeCalendar() {
     // 启用交互功能
     selectable: true,
     editable: true,
+    
+    // 🔴 启用当前时间线
+    nowIndicator: true,
     
     // 事件显示配置
     eventDisplay: 'block', // 确保事件以块状显示
@@ -255,7 +271,7 @@ function initializeCalendar() {
 function initializeControls() {
   // 设置默认选中的颜色
   selectColor('#3788d8');
-  
+
   // 监听事件名称输入
   var eventTitleInput = document.getElementById('eventTitleInput');
   if (eventTitleInput) {
@@ -397,7 +413,7 @@ function addNewEvent(info) {
       originalTitle: title,
       repeatFrequency: selectedRepeatFrequency,
       repeatCount: selectedRepeatCount,
-      seriesId: Date.now().toString() // 重复系列ID
+      seriesId: generateEventId() // 重复系列ID
     }
   };
   
@@ -405,7 +421,7 @@ function addNewEvent(info) {
   
   if (selectedRepeatFrequency === 'none') {
     // 单个事件
-    baseEvent.id = Date.now().toString();
+    baseEvent.id = generateEventId();
     var addedEvent = calendar.addEvent(baseEvent);
     addedEvents.push(addedEvent);
   } else {
@@ -430,16 +446,32 @@ function addNewEvent(info) {
  * 处理事件点击
  */
 function handleEventClick(info) {
-  console.log('🖱️ 点击事件:', info.event.id, info.event.title);
+  console.log('🖱️ 点击事件详细信息:');
+  console.log('  - 事件ID:', info.event.id);
+  console.log('  - 事件标题:', info.event.title);
+  console.log('  - 事件开始时间:', info.event.start);
+  console.log('  - 事件背景色:', info.event.backgroundColor);
+  console.log('  - 事件扩展属性:', info.event.extendedProps);
+  
+  // 验证事件在calendar中的存在性
+  var allEvents = calendar.getEvents();
+  var foundEvent = allEvents.find(e => e.id === info.event.id);
+  console.log('  - 在calendar中找到事件:', foundEvent ? '是' : '否');
+  
+  if (foundEvent && foundEvent !== info.event) {
+    console.warn('⚠️ 警告：点击的事件对象与calendar中的事件对象不一致！');
+    console.log('  - 点击事件对象:', info.event);
+    console.log('  - Calendar事件对象:', foundEvent);
+  }
   
   // 取消之前选中的事件
   if (selectedEvent) {
-    console.log('🔄 取消之前选中的事件:', selectedEvent.id);
+    console.log('🔄 取消之前选中的事件:', selectedEvent.id, selectedEvent.title);
     selectedEvent.setProp('classNames', selectedEvent.classNames.filter(name => name !== 'selected'));
   }
   
-  // 选中当前事件
-  selectedEvent = info.event;
+  // 选中当前事件（使用从calendar中找到的事件，确保引用一致）
+  selectedEvent = foundEvent || info.event;
   selectedEvent.setProp('classNames', [...selectedEvent.classNames, 'selected']);
   console.log('✅ 选中新事件:', selectedEvent.id, selectedEvent.title);
   
@@ -598,24 +630,52 @@ function enterEditingMode(event) {
   // 更新预设区显示选中事件的信息
   // 对于重复事件，显示原始标题（不含重复标识）
   var displayTitle = event.title || '';
+  
+  console.log('🔍 事件信息分析:');
+  console.log('  - 原始标题:', event.title);
+  console.log('  - 背景颜色:', event.backgroundColor);
+  console.log('  - 边框颜色:', event.borderColor);
+  console.log('  - 扩展属性:', event.extendedProps);
+  
+  // 处理标题显示逻辑
   if (event.extendedProps?.originalTitle) {
+    // 重复事件：使用扩展属性中的原始标题
     displayTitle = event.extendedProps.originalTitle;
+    console.log('  - 使用扩展属性中的原始标题:', displayTitle);
   } else if (event.title && event.title.startsWith('🔁 ')) {
     // 如果标题以重复标识开头，尝试提取原始标题
     var match = event.title.match(/^🔁\s+(.+?)\s+\(.+\)$/);
     if (match) {
       displayTitle = match[1];
+      console.log('  - 从重复事件标题中提取:', displayTitle);
+    } else {
+      displayTitle = event.title;
+      console.log('  - 重复事件标题格式异常，使用原标题:', displayTitle);
     }
+  } else {
+    // 非重复事件：直接使用标题，确保不为空
+    displayTitle = event.title || '新事件';
+    console.log('  - 非重复事件，使用直接标题:', displayTitle);
   }
   
   eventTitle = displayTitle;
-  selectedColor = event.backgroundColor || '#3788d8';
+  
+  // 处理颜色设置，确保有有效的颜色值
+  var eventColor = event.backgroundColor || event.borderColor || '#3788d8';
+  selectedColor = eventColor;
+  
+  console.log('🎨 颜色信息分析:');
+  console.log('  - 事件背景色:', event.backgroundColor);
+  console.log('  - 事件边框色:', event.borderColor);
+  console.log('  - 最终选中颜色:', selectedColor);
   
   // 初始化待处理的变更
   pendingTitle = eventTitle;
   pendingColor = selectedColor;
   
-  console.log('📝 设置编辑参数 - 标题:', eventTitle, '颜色:', selectedColor);
+  console.log('📝 最终设置编辑参数:');
+  console.log('  - 标题:', eventTitle);
+  console.log('  - 颜色:', selectedColor);
   
   // 更新输入框
   var eventTitleInput = document.getElementById('eventTitleInput');
@@ -807,6 +867,12 @@ function applyPendingChanges() {
       if (changes.title) {
         console.log('📝 应用标题更改:', selectedEvent.title, '→', changes.title);
         selectedEvent.setProp('title', changes.title);
+        
+        // 同时更新扩展属性中的原始标题
+        if (selectedEvent.extendedProps) {
+          selectedEvent.extendedProps.originalTitle = changes.title;
+          console.log('🔄 同步更新originalTitle:', changes.title);
+        }
       }
       
       // 应用颜色更改
@@ -989,6 +1055,26 @@ function saveEvents() {
     var allEvents = calendar.getEvents();
     console.log('💾 准备保存', allEvents.length, '个事件');
     
+    // 检查重复ID
+    var ids = allEvents.map(e => e.id);
+    var duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+    if (duplicateIds.length > 0) {
+      console.error('🚨 发现重复的事件ID:', duplicateIds);
+      // 清理重复事件
+      var uniqueEvents = [];
+      var seenIds = new Set();
+      allEvents.forEach(function(event) {
+        if (!seenIds.has(event.id)) {
+          seenIds.add(event.id);
+          uniqueEvents.push(event);
+        } else {
+          console.warn('🗑️ 移除重复事件:', event.id, event.title);
+          event.remove();
+        }
+      });
+      allEvents = uniqueEvents;
+    }
+    
     var events = allEvents.map(function(event) {
       var eventData = {
         id: event.id,
@@ -1029,11 +1115,227 @@ function loadEvents() {
   var savedEvents = localStorage.getItem('myCalendarEvents');
   if (savedEvents) {
     var events = JSON.parse(savedEvents);
-    console.log('加载了', events.length, '个事件');
+    console.log('📂 从localStorage加载了', events.length, '个事件');
+    
+    // 检查重复ID
+    var ids = events.map(e => e.id);
+    var duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+    if (duplicateIds.length > 0) {
+      console.error('🚨 localStorage中发现重复的事件ID:', duplicateIds);
+      // 去重处理
+      var uniqueEvents = [];
+      var seenIds = new Set();
+      events.forEach(function(event) {
+        if (!seenIds.has(event.id)) {
+          seenIds.add(event.id);
+          uniqueEvents.push(event);
+        } else {
+          console.warn('🗑️ 跳过重复事件:', event.id, event.title);
+        }
+      });
+      events = uniqueEvents;
+      console.log('✅ 去重后剩余', events.length, '个事件');
+    }
+    
     return events;
   } else {
     console.log('没有保存的事件');
     return [];
+  }
+}
+
+/**
+ * 清理localStorage中的重复事件
+ */
+function cleanupLocalStorage() {
+  var savedEvents = localStorage.getItem('myCalendarEvents');
+  if (savedEvents) {
+    var events = JSON.parse(savedEvents);
+    var originalCount = events.length;
+    
+    // 去重
+    var uniqueEvents = [];
+    var seenIds = new Set();
+    events.forEach(function(event) {
+      if (!seenIds.has(event.id)) {
+        seenIds.add(event.id);
+        uniqueEvents.push(event);
+      }
+    });
+    
+    if (uniqueEvents.length < originalCount) {
+      localStorage.setItem('myCalendarEvents', JSON.stringify(uniqueEvents));
+      console.log('🧹 清理localStorage：从', originalCount, '个事件减少到', uniqueEvents.length, '个事件');
+    }
+  }
+}
+
+// ============= 调试工具函数 =============
+
+/**
+ * 显示所有事件的详细信息
+ */
+function debugShowEvents() {
+  console.log('🔍 ===== 调试：显示所有事件 =====');
+  
+  var allEvents = calendar.getEvents();
+  console.log('📋 日历中的事件数量:', allEvents.length);
+  
+  allEvents.forEach(function(event, index) {
+    console.log(`📌 事件 ${index + 1}:`, {
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      backgroundColor: event.backgroundColor,
+      extendedProps: event.extendedProps
+    });
+  });
+  
+  var savedEvents = localStorage.getItem('myCalendarEvents');
+  if (savedEvents) {
+    var storageEvents = JSON.parse(savedEvents);
+    console.log('💾 localStorage中的事件数量:', storageEvents.length);
+    
+    storageEvents.forEach(function(event, index) {
+      console.log(`💿 存储事件 ${index + 1}:`, {
+        id: event.id,
+        title: event.title,
+        extendedProps: event.extendedProps
+      });
+    });
+    
+    // 检查ID冲突
+    var calendarIds = allEvents.map(e => e.id);
+    var storageIds = storageEvents.map(e => e.id);
+    var duplicateIds = calendarIds.filter((id, index) => calendarIds.indexOf(id) !== index);
+    var storageDuplicates = storageIds.filter((id, index) => storageIds.indexOf(id) !== index);
+    
+    if (duplicateIds.length > 0) {
+      console.error('🚨 日历中的重复ID:', duplicateIds);
+    }
+    if (storageDuplicates.length > 0) {
+      console.error('🚨 localStorage中的重复ID:', storageDuplicates);
+    }
+    
+    if (duplicateIds.length === 0 && storageDuplicates.length === 0) {
+      console.log('✅ 没有发现重复ID');
+    }
+  }
+  
+  console.log('🔍 ===== 调试结束 =====');
+}
+
+/**
+ * 清理重复数据
+ */
+function debugCleanupData() {
+  console.log('🧹 开始清理重复数据...');
+  cleanupLocalStorage();
+  
+  // 重新加载页面以应用清理结果
+  location.reload();
+}
+
+/**
+ * 清空本地存储
+ */
+function debugClearStorage() {
+  if (confirm('⚠️ 确定要清空所有本地存储的事件吗？此操作不可恢复！')) {
+    localStorage.removeItem('myCalendarEvents');
+    console.log('🗑️ 已清空本地存储');
+    location.reload();
+  }
+}
+
+// ============= 当前时间线功能 =============
+
+/**
+ * 启动当前时间线的定期更新
+ */
+function startNowIndicatorUpdate() {
+  // 立即更新一次
+  updateNowIndicator();
+  
+  // 每30秒更新一次
+  setInterval(updateNowIndicator, 30000);
+}
+
+/**
+ * 更新当前时间线和时间标签
+ */
+function updateNowIndicator() {
+  if (!calendar) return;
+  
+  // 刷新日历以更新时间线位置
+  calendar.render();
+  
+  // 简化的红线调整
+  setTimeout(function() {
+    addTimeLabel();
+  }, 200);
+}
+
+/**
+ * 在当前时间线上添加时间标签
+ */
+function addTimeLabel() {
+  var nowIndicator = document.querySelector('.fc-timegrid-now-indicator-line');
+  if (nowIndicator) {
+    var now = new Date();
+    var timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                    now.getMinutes().toString().padStart(2, '0');
+    
+    // 移除之前的标签
+    var existingLabel = document.querySelector('.custom-time-label');
+    if (existingLabel) {
+      existingLabel.remove();
+    }
+    
+    // 找到时间网格的左边界
+    var timeGrid = document.querySelector('.fc-timegrid-body');
+    var timeAxis = document.querySelector('.fc-timegrid-axis');
+    var axisWidth = timeAxis ? timeAxis.offsetWidth : 60;
+    
+    // 创建新的时间标签
+    var timeLabel = document.createElement('div');
+    timeLabel.className = 'custom-time-label';
+    timeLabel.textContent = timeString;
+    timeLabel.style.cssText = `
+      position: absolute;
+      left: ${axisWidth + 5}px;
+      top: -10px;
+      background: #ff4757;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(255, 71, 87, 0.3);
+      z-index: 1001;
+    `;
+    
+    // 添加箭头指向时间线
+    var arrow = document.createElement('div');
+    arrow.style.cssText = `
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-left: 6px solid #ff4757;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      margin-top: -6px;
+    `;
+    
+    timeLabel.appendChild(arrow);
+    
+    // 将标签添加到时间线的父容器
+    var container = nowIndicator.closest('.fc-timegrid-body') || nowIndicator.parentElement;
+    if (container) {
+      container.appendChild(timeLabel);
+    }
   }
 }
 
@@ -2146,15 +2448,9 @@ function deleteRepeatEvents(event, deleteOptions) {
       console.log('🔎 查找事件ID:', id);
       var foundEvent = calendar.getEventById(id);
       if (foundEvent) {
-        console.log('✅ 找到事件:', foundEvent.id, foundEvent.title);
         eventsToDelete.push(foundEvent);
-      } else {
-        console.log('❌ 未找到事件ID:', id);
       }
     });
-    
-    console.log('总共要删除的事件ID:', Array.from(eventIdsToDelete));
-    console.log('实际找到的事件对象:', eventsToDelete.length, '个');
   }
   
   if (eventsToDelete.length === 0) {
